@@ -11,7 +11,15 @@ import com.example.retrofitkotlin.model.CryptoModel
 import com.example.retrofitkotlin.service.CryptoAPI
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.handleCoroutineException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
@@ -23,9 +31,14 @@ class MainActivity : AppCompatActivity() {
     private val BASE_URL = "https://raw.githubusercontent.com/"
     private var cryptoModels: ArrayList<CryptoModel>? = null
     private var recyclerViewAdapter: RecyclerViewAdapter? = null
-
+    private var job : Job? = null
     //Disposable
     private var compositeDisposable : CompositeDisposable? = null
+
+    //hataları logda göstermek için
+    val exceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+        println("Error: ${throwable.localizedMessage}")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +61,7 @@ class MainActivity : AppCompatActivity() {
 
         loadData()
     }
+    /*
     private fun loadData() {
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -59,6 +73,35 @@ class MainActivity : AppCompatActivity() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::handleResponse))
+
+    }
+
+     */
+
+    private fun loadData() {
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CryptoAPI::class.java)
+
+        job = CoroutineScope(Dispatchers.IO + exceptionHandler).launch {
+            val response = retrofit.getData()
+
+            withContext(Dispatchers.Main){
+                if(response.isSuccessful) {
+                    response.body()?.let {
+                        cryptoModels = ArrayList(it)
+                        cryptoModels?.let {
+                            recyclerViewAdapter = RecyclerViewAdapter(it,this@MainActivity)
+                            binding.recyclerView.adapter = recyclerViewAdapter
+                        }
+                    }
+                }
+            }
+        }
+
 
     }
 
@@ -77,6 +120,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        compositeDisposable?.clear()
+        //compositeDisposable?.clear()
+        job?.cancel()
     }
 }

@@ -3,6 +3,7 @@ package com.example.retrofitkotlin.service
 import io.reactivex.Observable
 import com.example.retrofitkotlin.model.CryptoModel
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.GET
 
 interface CryptoAPI {
@@ -15,7 +16,8 @@ interface CryptoAPI {
 
     @GET("atilsamancioglu/K21-JSONDataSet/master/crypto.json")
         //fun getData(): Call<List<CryptoModel>>// call kullanımı doğru değil rxjava kutuphanesi ile Observable kullanılmalı
-    fun getData(): Observable<List<CryptoModel>>
+    //fun getData(): Observable<List<CryptoModel>> //response ve suspend fun yapmamız lazım alttaki gibi (coroutine için)
+    suspend fun getData(): Response<List<CryptoModel>>
 
 
 }
